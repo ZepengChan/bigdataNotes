@@ -1,0 +1,48 @@
+﻿hive自定义udf依赖的包：hadoop基础包&hive-exec
+<dependency>
+  <groupId>org.apache.hive</groupId>
+  <artifactId>hive-exec</artifactId>
+  <version>0.13.1</version>
+</dependency>
+
+创建Function命令: CREATE FUNCTION [db_name.]function_name AS class_name [USING JAR|FILE|ARCHIVE 'file_uri' [, JAR|FILE|ARCHIVE 'file_uri'] ]; file_uri可以为hdfs上文件路径
+删除: drop function function_name;
+显示: show functions ['regex']
+
+使用database-beifeng13
+
+一、自定义UDF(一个输入，一个输出)
+	1. 实现一个大小写转换的自定义函数。
+		实现完成后
+		1. 添加jar：add jar /home/hadoop/jobs/beifeng14-0.0.1.jar;
+		2. 创建function:
+			临时function： create temporary function temp_f as 'com.hive.ql.UDFLowerOrUpperCase';
+			永久function: create function lower_upper as 'com.hive.ql.UDFLowerOrUpperCase';
+		3. 使用
+			select [dbname.]lower_upper(studentname) from beifeng13.students;
+二、自定义UDAF(多个输入，一个输出) 和group by一起操作
+	1. UDAF介绍
+		PARTIAL1：iterate&terminatePartial  map的输入阶段
+		PARTIAL2: merge&terminatePartial map输出阶段
+		FINAL: merge&terminate reducer输入&reducer输出阶段
+		COMPLETE: iterate&terminate 没有reducer的map输出阶段
+	2. UDAF实例：实现自定义sum函数
+		create function self_sum as 'com.beifeng.hive.ql.UDAFSumCase';
+三、自定义UDTF(一个输入，多个输出)
+	1. UDTF实例：解析爬虫数据，从数据中读取产品id、产品名称、价格。
+		1. 实现udtf,并打包jar，copy到linux机器上。
+		2. 创建hbase关联表
+			create external table hive_data(rowkey string,content string) row format serde 'org.apache.hadoop.hive.hbase.HBaseSerDe' stored by 'org.apache.hadoop.hive.hbase.HBaseStorageHandler' with serdeproperties('hbase.columns.mapping'=':key,f:content') tblproperties ('hbase.table.name'='data');
+		3. 创建函数
+			add jar /home/hadoop/jobs/beifeng14-0.0.1.jar;
+			create function f1 as 'com.beifeng.hive.ql.UDTFCase';
+四、hive集成自定义函数的各种不同的方式
+	1. 修改hive-site.xml
+		<property>
+        <name>hive.aux.jars.path</name>
+        <value>file:///home/hadoop/jobs/beifeng14-0.0.1.jar</value>
+  </property>
+	最常用的：使用将jar上传到hdfs中，然后再进行操作的方式。
+		1. 上传文件到hdfs: dfs -put /home/hadoop/jobs/beifeng14-0.0.1.jar /beifeng/beifeng14-0.0.1.jar
+		2.  创建函数:create function f2 as 'com.beifeng.hive.ql.UDTFCase' using jar 'hdfs://hh:8020/beifeng/beifeng14-0.0.1.jar';
+		3. 正常使用

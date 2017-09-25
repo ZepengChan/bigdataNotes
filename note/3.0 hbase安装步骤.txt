@@ -1,0 +1,18 @@
+1 下载
+	http://archive.cloudera.com/cdh5/cdh/5/hbase-0.98.6-cdh5.3.6.tar.gz
+2 解压
+	tar -zxvf xxx
+3 修改conf/hbase-env.sh
+	JAVA_HOME=/usr/local/jdk
+	HBASE_CLASSPATH=hadoophome/etc/hadoop
+	export HBASE_PID_DIR=/home/hadoop/bd/hbase-0.98.6-cdh5.3.6/hbase/pids
+	port HBASE_MANAGES_ZK=true
+4 修改hbase-site.xml
+	hbase.rootdir=hdfs://hh/hbase
+	hbase.cluster.distributed=true
+	hbase.tmp.dir=/home/hadoop/bd/hbase-0.98.6-cdh5.3.6/hbase/tmp
+5 修改regionservers
+	将主机名添加进去，每行一个
+6 修改环境变量
+	添加HBASE_HOME和PATH
+7 启动验证

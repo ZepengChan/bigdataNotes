@@ -1,0 +1,100 @@
+前置条件：
+hive启动
+	root用户登录 密码123456
+	启动mysql：service mysqld restart
+	使用hadoop用户登录，启动metastore：hive --service metastore &
+数据文件准备
+	将文档文件夹中的classes.txt和students.txt移动到linux机器和hdfs文件系统上。
+	命令：hdfs dfs -put ./13 /beifeng/
+创建hive相关表准备：
+create database beifeng13;
+create table students(studentId int comment 'this is student id, is not null', classId int comment 'this is class id, can set to null', studentName string comment 'this is student name') row format delimited fields terminated by ',';
+create table classes(classId int comment 'this is class id, is not null', className string comment 'this is class name') row format delimited fields terminated by ',';
+
+一、导入数据
+    1. 分别导入local和hdfs的数据
+		a. 分别从linux机器上导入数据
+			load data local inpath '/home/hadoop/datas/13/classes.txt' into table classes;
+			load data local inpath '/home/hadoop/datas/13/students.txt' into table students;
+			load data local inpath '/home/hadoop/datas/13/classes.txt' overwrite into table classes;
+		b. 从hdfs上导入数据
+			load data inpath '/beifeng/13/students.txt' into table students;
+			dfs -put /home/hadoop/datas/13/students.txt /beifeng/13/
+			load data inpath '/beifeng/13/students.txt' overwrite into table students;
+	2. 导入其他表的数据(多表插入)
+		将学生表的学生id和classid分别导出到不同表中，
+		create table test1(id int);
+		create table test2(id int);
+		from students insert into table test1 select studentid  insert overwrite table test2 select distinct classid where classid is not null;
+二、select语法介绍
+	from语法
+		1. 正常from:
+			select * from students;
+		2. from语句提前:
+			 from students select *;
+	cte语法：
+		1. 获取班级号为1的学生信息:
+			with tmp as (select studentid as sid,classid as cid,studentname as name from students where classid=1) from tmp select *;
+		2. 获取总学生数、已经分配班级的学生数、未分配班级的学生数(作业1)。
+			分析；
+				总学生数：studentid的总数
+				分配班级的学生数：classid不为空的学生总数
+				未分配的学生数: classid为空的学生数
+			结果: 12 7 5
+	where & group by语法实例：
+		group语句只能返回对于的group列&进行聚合的value。
+		1. 获取学生数大于3的班级id
+			from students select classid where classid is not null group by classid having count(studentid) > 3;
+	排序语法：
+		1. 使用order by根据学生id倒序。
+			select * from students order by studentid desc;
+		2. 设置hive.mapred.mode为strict，然后在进行order by操作。
+			set hive.mapred.mode=strict;
+			select * from students order by studentid desc; 会出现异常
+			select * from students order by studentid desc limit 5;
+		3. 使用sort by根据学生id排序。
+			select * from students sort by studentid desc;
+		4. 设置mapreduce.job.reduces个数为两个，然后再使用sort by进行排序。
+			set mapreduce.job.reduces=2;
+			select * from students sort by studentid desc;
+三、join语法
+	内连接语法
+		1. 获取学生和班级之间完全匹配的数据。
+			select students.*,classes.* from classes join students on classes.classid=students.classid;
+			select students.*,classes.* from classes cross join students on classes.classid=students.classid;			
+	外链接语法：
+		1. 获取全部学生的班级信息，如果该学生没有分配班级，那么班级信息显示为null。
+			select students.*, classes.* from students left join classes on students.classid = classes.classid;
+		2. 获取全部班级的学生信息，如果某个班级没有学生，那么学生信息显示为null。(作业2)
+		3. 获取全部信息，如果没有匹配数据的显示null。(作业3)
+	半连接：
+		1. 获取学生表中班级id在班级表中的所有学生信息。
+			sql: select students.* from students where classid in (select distinct classid from classes);
+			原hql: select students.* from students  join classes on students.classid = classes.classid;
+			新hql: select students.* from students left semi join classes on students.classid=classes.classid;
+	mapjoin:
+		select /*+ mapjoin(classes) */ * from students join classes on students.classid=classes.classid;
+四、子查询
+	1. 获取学生数最多的班级，学生的个数。
+		第一步：获取每个班级的学生总数
+		第二步：选择学生数最多的班级学生数
+		from (select count(studentid) as sc from students where classid is not null group by classid) as tmp select max(sc);
+	2. 获取学生数最多的班级信息。(作业4)
+		第一步：获取每个班级的学生总数
+		第二步：选择学生数最多的班级学生数
+		第三步：根据最多的学生数和第一步获取的表数据进行比较，获取班级信息。
+		
+五、导出数据
+	1. 导出表关联后的班级名称和学生名称(loca&hdfs)。（导出全部不为空的信息）
+		班级1，学生1
+		from (select classes.classname as col1, students.studentname as col2 from classes join students on classes.classid = students.classid) as tmp insert overwrite local directory  '/home/hadoop/result/13/01' select col1,col2 insert overwrite directory '/beifeng/result/13/01/' select col1,col2 ;
+		
+		格式化：
+		from (select classes.classname as col1, students.studentname as col2 from classes join students on classes.classid = students.classid) as tmp insert overwrite local directory  '/home/hadoop/result/13/01' row format delimited fields terminated by ',' select col1,col2  ;
+	2. 同时分别将已经分配班级的学生和未分配班级的学生导出到不同的文件夹中。(作业5)
+六、其他命令
+	1. 在students和classes表上创建一个视图，视图包含两列分别是：班级名称，学生名称
+		create view viewname as select classes.classname as cname, students.studentname as sname from classes join students on classes.classid = students.classid 
+	2. 在linux系统中通过命令hive -f/-e将所有学生信息保存到一个文件中。
+		新建一个文件，文件内容为:select * from students
+		执行：hive --database beifeng13 -f test.sql >> result.txt

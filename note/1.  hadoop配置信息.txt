@@ -1,0 +1,56 @@
+第一步：配置hadoop-env.sh
+	export JAVA_HOME=/usr/local/jdk
+	export HADOOP_PID_DIR=/home/hadoop/bigdater/hadoop-2.5.0-cdh5.3.6/hdfs/tmp
+第二步：配置mapred-env.sh
+	export HADOOP_MAPRED_PID_DIR=/home/hadoop/bigdater/hadoop-2.5.0-cdh5.3.6/hdfs/tmp
+第三步：配置yarn-env.sh
+	export YARN_PID_DIR=/home/hadoop/bigdater/hadoop-2.5.0-cdh5.3.6/hdfs/tmp
+第四步：配置core-site.xml文件
+	<property>
+		<name>fs.defaultFS</name>
+		<value>hdfs://hh:8020</value>
+	</property>
+	<property>
+		<name>hadoop.tmp.dir</name>
+		<value>/home/hadoop/bigdater/hadoop-2.5.0-cdh5.3.6/hdfs/tmp</value>
+	</property>
+第五步：配置hdfs-site.xml文件
+	<property>
+		<name>dfs.replication</name>
+		<value>1</value>
+	</property>
+	<property>
+		<name>dfs.namenode.name.dir</name>
+		<value>/home/hadoop/bigdater/hadoop-2.5.0-cdh5.3.6/hdfs/name</value>
+	</property>
+	<property>
+		<name>dfs.namenode.data.dir</name>
+		<value>/home/hadoop/bigdater/hadoop-2.5.0-cdh5.3.6/hdfs/data</value>
+	</property>
+	<property>
+		<name>dfs.permissions.enabled</name>
+		<value>false</value>
+	</property>
+第六步：创建mapred-site.xml文件，直接执行命令cp mapred-site.xml.templete mapred-site.xml
+第七步：配置mapred-site.xml文件
+	<property>
+		<name>mapreduce.framework.name</name>
+		<value>yarn</value>
+	</property>
+第八步：配置yarn-site.xml文件
+	<property>
+		<name>yarn.nodemanager.aux-services</name>
+		<value>mapreduce_shuffle</value>
+	</property>
+第九步：配置slaves指定datanode节点，将localhost改成主机名
+第十步：修改环境变量文件".base_profile",并使其生效
+	###### hadoop 2.5.0
+	export HADOOP_HOME=/home/hadoop/bigdater/hadoop-2.5.0-cdh5.3.6/
+	export HADOOP_PREFIX=$HADOOP_HOME
+	export HADOOP_COMMON_HOME=$HADOOP_PREFIX
+	export HADOOP_CONF_DIR=$HADOOP_PREFIX/etc/hadoop
+	export HADOOP_HDFS_HOME=$HADOOP_PREFIX
+	export HADOOP_MAPRED_HOME=$HADOOP_PREFIX
+	export HADOOP_YARN_HOME=$HADOOP_PREFIX
+	export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+	

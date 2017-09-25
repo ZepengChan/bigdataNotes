@@ -1,0 +1,6 @@
+scan 'users', {FILTER=>"ColumnPrefixFilter('id')"}
+scan 'users', {FILTER=>"MultipleColumnPrefixFilter('id', 'name')"}
+rowFilter需要给定两个参数，第一个参数:=,>,<,>=，<=。第二参数是二进制的字符串数组
+scan 'users', {FILTER=>"RowFilter(>=,'binary:row8')"}
+scan 'users', {FILTER=>"SingleColumnValueFilter('f','id',=,'binary:2')"}
+scan 'users', {FILTER=>"SingleColumnValueFilter('f','id',<,'binary:3') OR RowFilter(>,'binary:row7')"}

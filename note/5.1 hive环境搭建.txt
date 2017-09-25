@@ -1,0 +1,40 @@
+一、 安装mysql
+	1. 使用root用户: su root
+	2. 安装
+		yum install mysql
+		yum install mysql-server
+		yum install mysql-devel（可选）
+	3. 修改配置信息，添加: vim /etc/my.cnf
+		[mysql]
+		default-character-set=utf8
+		[mysqld]
+		character-set-server=utf8
+		lower_case_table_names=1
+	4. 启动mysql：service mysqld restart/stop/start
+	5. 配置超级用户名和密码， mysqladmin -u root password 123456
+	6. root用户登录mysql -u root -p 123456
+	7. 创建mysql用户：create user 'hive' identified by 'hive';
+	8. 授权：grant all privileges on *.* to 'hive'@'%' with grant option
+	9. 重启一下这个mysql服务。
+	10. 使用hive用户创建数据库并修改连接信息。
+	   create database hive;
+	   alter database hive character set latin1;
+	   
+	   
+二、 安装hive
+	1. 下载hive：http://archive.cloudera.com/cdh5/cdh/5/hive-0.13.1-cdh5.3.6.tar.gz
+	2. hive的帮助文档位置：https://cwiki.apache.org/confluence/display/Hive/LanguageManual，
+		hive官网:http://hive.apache.org
+	3. 参考hive-site.xml文件
+	4. 将bin目录添加到path目录中，
+	    vim ~/.bash_profile
+		    export HIVE_HOME=/home/hadoop/bigdater/hive-0.13.1-cdh5.3.6/
+			export PATH=$PATH:$HIVE_HOME/bin
+		source ~/.bash_profile
+	5. 移动mysql驱动jar到hive的lib文件夹下。
+	6. 启动metastore服务(启动hdfs+yarn服务)
+	    hive --service metastore &
+	7. 进入hive的客户端
+		hive
+	
+	

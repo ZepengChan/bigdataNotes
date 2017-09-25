@@ -1,0 +1,26 @@
+一、database
+	创建：ILED: Execution Error, return code 1 from org.apache.hadoop.hive.ql.exec.DDLTask. Database bigdater already exists
+二、table
+    [ROW FORMAT row_format], row_format格式：
+		delimited fields terminated by '\001' collection terminated by '\002' map keys terminated by '\003' lines terminated by '\004' NULL DEFINED AS '\N'
+	[STORED AS file_format], file_format格式：
+		sequencefile
+		textfile(default)
+		rcfile
+		orc
+		parquet
+		avro
+	案例2：
+		先将data2.txt文件上传到hdfs的/customers文件夹中。
+		hdfs dfs -mkdir /customers
+		hdfs dfs -put data2.txt /customers
+	案例3：
+		先将data3.txt文件上传到hdfs的/complex_table_test文件夹中。
+		hdfs dfs -mkdir /complex_table_test
+		hdfs dfs -put data2.txt /complex_table_test
+	案例4：
+		hive和hbase关联
+		create external table hive_users(key string,id int, name string, phone string) row format serde 'org.apache.hadoop.hive.hbase.HBaseSerDe' stored by 'org.apache.hadoop.hive.hbase.HBaseStorageHandler' with serdeproperties('hbase.columns.mapping'=':key,f:id,f:name,f:phone') tblproperties('hbase.table.name'='users');
+	
+		
+		

@@ -1,0 +1,188 @@
+主要讲解运行命令，也就是sbin目录下面的启动shell文件。
+
+distribute-exclude.sh
+	作用：将exclude文件分布到各个namenode上。
+		exclude文件主要作用不允许这个文件中host对应的主机连接NN，配置在hdfs-site.xml中配置key为dfs.hosts.exclude，默认为空。
+		那么对应就有一个允许列表dfs.hosts，默认为空。
+		两个属性都是给定文件路径。
+		
+		也就是说将一个不允许的hosts列表文件，复制到全部namenode机器上去。包括本机(如果本机是NN)。
+		执行步骤：
+			1、执行hdfs-config.sh
+			2、读取NN节点和配置的exclude文件地址
+			3、scp copy 覆盖
+
+httpfs.sh
+	作用：启动http fs文件系统，也就是使用http来进行文件访问操作。好处是：如果我们的集群处于防火墙内，但是我们又需要进行访问的情况，就可以开启这个服务，使用的是内置的tomcat，一般情况不会使用。
+	httpfs.sh start/stop
+	需要配置信息为:core-site.xml文件中添加
+		<property>
+			<name>hadoop.proxyuser.xxx.hosts</name>
+			<value>*</value>
+		</property>
+		<property>
+			<name>hadoop.proxyuser.xxx.groups</name>
+			<value>*</value>
+		</property>
+	制定httpfs的用户代理hosts和用户组分别不进行限制(*)
+	get 请求：
+	http://10.2.3.12:14000/webhdfs/v1</path>?op=LISTSTATUS 查看list status
+	open
+	put请求：
+	curl -i -X PUT "http://hh:14000/webhdfs/v1/tmp/webhdfs?op=MKDIRS&user.name=hadoop"
+	curl -i -X DELETE "http://<host>:<port>/webhdfs/v1/<path>?op=DELETE
+                              [&recursive=<true|false>]"
+	"http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETFILESTATUS"
+
+kms.sh
+	作用启动kms服务，默认监听端口为16000
+	
+	
+slaves.sh
+	作用：通知其他slave节点机器，执行命令
+	参数：
+	执行步骤：
+		1.首先执行libexec/hadoop-config.sh设置环境变量
+		2.执行${HADOOP_CONF_DIR}/hadoop-env.sh设置环境变量
+		3.获取${HADOOP_CONF_DIR}/slaves文件的内容
+		4.通过ssh命令访问其他机器，这里指定端口号HADOOP_SSH_OPTS，并让其他机器执行命令。
+	ssh 22 host 命令
+		命令有个要求；指定全称，默认路径为用户根目录。不要求本机有这个命令。
+	
+hadoop-daemon.sh
+	作用：启动当前节点的hadoop服务
+	Usage: hadoop-daemon.sh [--config conf-dir] [--hosts hostlistfile] [--script script] (start|stop) <hadoop-command> <args...>
+	--config 指定运行参数
+	--script指定执行的脚本，当hadoop-commend指定的参数不是下面的这些的时候
+	hadoop-command: namenode|secondarynamenode|datanode|journalnode|dfs|dfsadmin|fsck|balancer|zkfc
+	执行步骤：
+		1.执行libexce/hadoop-config.sh
+		2.读取参数，这里直接就开始读取--script参数，没有看到读取--config参数和--hosts参数
+		3.执行etc/hadoop/hadoop-env.sh： ”需要配置HADOOP_CONF_DIR“
+		4.设置一些pid和log日志位置信息
+		4.决定是start stop
+		5.如果command是hadoop集群的一些命令，那么执行bin/hdfs命令,否则执行--script指定的命令，如果为空，那就不执行
+
+hadoop-daemons.sh
+	作用：启动集群的hadoop的服务
+	Usage: hadoop-daemons.sh [--config confdir] [--hosts hostlistfile] [start|stop] command args...
+	--config 指定参数信息
+	执行步骤：
+		1.执行libexec/hadoop-config.sh
+		2.执行sbin/slaves.sh
+		3.使用slaves.sh来通知所有机器执行hadoop-daemon.sh,并将传入的参数同事传递过去。
+	
+hdfs-config.sh
+	作用：执行libexec/hadoop-config.sh，我们从这个代码中可以看出必须将sbin目录添加到PATH路径中去。
+		配置环境变量：HADOOP_LIBEXEC_DIR HADOOP_COMMON_HOME HADOOP_HOME 必须有一个配置，当然不配置也是可以的。
+
+mr-jobhistory-daemon.sh
+	作用：启动当前节点的jobhistory相关服务
+	Usage: mr-jobhistory-daemon.sh [--config <conf-dir>] (start|stop) <mapred-command> 其实--config参数没有进行处理
+	执行步骤：
+		1. 执行libexec/mapred-config.sh配置mapred相关环境变量
+		2. 执行${HADOOP_CONF_DIR}/mapred-env.sh
+		3. 设置日志和pid存储路径
+		4. 判断是start or stop。如果是stop直接kill pid
+		5. 如果是start，调用bin/mapred
+
+refresh-namenodes.sh
+	作用:刷新namenode节点数据
+		hdfs dfsadmin -fs hdfs://xxx -refreshNodes
+		
+start-all.sh
+	同时启动hdfs和yarn
+stop-all.sh
+	同时关闭hdfs和yarn
+
+start-balancer.sh
+	作用：启动数据平衡器
+	执行步骤：
+		1.执行libexce/hadoop-config.sh环境变量
+		2.调用hadoop-daemon.sh --script bin/hdfs start balancer， 也就是说最终还是调用了hdfs的start balancer命令。
+stop-balancer.sh
+	停止数据平衡器
+	底层调用hadoop-daemon.sh的stop命令
+
+start-dfs.sh
+	作用：启动hdfs相关服务
+	Usage: start-dfs.sh [-upgrade|-rollback] [other options such as -clusterId]
+	upgrade: 升级
+	rollback：回滚到上一个版本
+	执行步骤：
+		1. 获取当前命令的绝对路径，获取libexec的路径
+		2. 执行libexce/hdfs-config.sh(其实就是为了hadoop-config.sh来进行环境配置)
+		3. 解析参数
+		4. 获取namenode列表， 通过hdfs的getconf命令来获取
+		5. 启动namenode节点，使用hadoop-daemons.sh来启动，并指定config为etc/hadoop;hostname为获取的nn列表，script为hdfs，start， namenode；并将其他参数传递过去。其实这里可以不指定script的。
+		6. 判断是否设置环境变量HADOOP_SECURE_DN_USER, 如果设置那么就不能启动datanode，必须使用start-secure-dns.sh来启动。否则使用hadoop-daemons.sh来启动datanode。
+		7. 通过hdfs命令获取列表，启动secondaryNamenodes
+		8. 通过hdfs命令获取shared edits路径，如果配置的路径是以qjournal://开头的,那么通过hadoop-daemons.sh来启动journalnode
+		9. 获取hdfs-site.xml中的配置参数dfs.ha.automatic-failover-enabled，如果为true, 那么启动zkfc
+
+stop-dfs.sh
+	作用：关闭全部的hdfs相关服务，没有参数
+	执行步骤：
+		1. 获取路径
+		2. 执行libexec/hdfs-config.sh<也就是执行hadoop-config.sh>
+		3. 使用hdfs的命令获取namenode节点列表，然后执行hadoop-daemons.sh命令停止服务
+		4. 停止datanode
+		5. 停止secondarynamenode
+		6. 停止journalnode
+		7. 停止zkfc
+
+start-secure-dns.sh
+	作用：启动安全验证的datanode节点服务，要求设置环境变量EUID=0 HADOOP_SECURE_DN_USER指定用户
+	底层也是调用hadoop-daemons.sh
+
+stop-secure-dns.sh
+	停止datanode
+
+
+start-yarn.sh
+	作用：启动yarn相关所有服务resourcemanager和nodemanager
+	参数无
+	执行步骤“；
+		1. 执行yarn-config.sh,
+		2. 启动resourcemanager，调用yarn-daemon.sh（因为只需要启动一次， 而nn可能因为存储ha机制（有多个namenode），所以调用的是hadoop-daemons.sh）
+		3. 启动nodemanager
+stop-yarn.sh 命令yarn相关停止服务
+
+yarn-daemons.sh
+	作用：启动/停止yarn相关服务
+	Usage: yarn-daemons.sh [--config confdir] [--hosts hostlistfile] [start
+|stop] command args...
+	执行步骤:
+		1. 执行yarn-config.sh设置环境变量
+		2. 执行slaves.sh通知其他机器执行yarn-daemon.sh
+
+yarn-daemon.sh
+	作用：启动/停止当前节点的yarn相关服务
+	Usage: yarn-daemon.sh [--config <conf-dir>] [--hosts hostlistfile] (start|stop) <yarn-command>
+	执行步骤：
+		1. 设置hdfs-config.sh相关环境变量
+		2. 设置yarn-env.sh相关环境变量
+		3. 设置pid log等信息
+		4. 如果是start，调用hdfs启动
+		5. 如果是stop，直接kill进程。
+
+
+hadoop-config.sh
+	配置一些环境变量信息
+hdfs-config.sh
+	根据是否环境变量调用hadoop-config.sh文件
+httpfs-config.sh
+	配置httpfs相关环境变量，比如pid的存储路径，log日志的存储路径等。还有这个其他配置信息。
+kms-config.sh
+	配置kms相关环境变量，最终会调用/etc/hadoop/kms-env.sh
+mapred-config.sh
+	配置mapred相关环境变量，主要是historyserver
+		先调用hadoop-config.sh
+		配置日志信息
+yarn-config.sh
+	调用hadoop-config.sh
+
+	
+	
+	
+	

@@ -1,0 +1,22 @@
+一、环境搭建
+当前目录为${hadoop_home}/etc/hadoop下
+1. 创建软连接 ln -s /home/hadoop/bigdater/hbase-0.98.6-cdh5.3.6/conf/hbase-site.xml ./hbase-site.xml
+2. 将hbase的jar信息引入到hadoop执行环节中去。
+	vim hadoop-env.sh
+	添加内容
+		if [ "$HADOOP_CLASSPATH" ]; then
+		  export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/home/hadoop/bigdater/hbase-0.98.6-cdh5.3.6/lib/*
+		else
+		  export HADOOP_CLASSPATH=/home/hadoop/bigdater/hbase-0.98.6-cdh5.3.6/lib/* 
+		fi
+	保存退出
+3. 测试
+	hadoop jar /home/hadoop/bigdater/hbase-0.98.6-cdh5.3.6/lib/hbase-server-0.98.6-cdh5.3.6.jar rowcounter yourhbasetablename
+	
+
+二、案例编写
+编写自定义的MR程序读取hbase的数据或者往hbase中写数据注意点：
+1. 如果是从hbase中读取数据，那么要求mapper实现TableMapper抽象类。如果是往hbase中写数据，而且是有reducer的情况下，要求reducer实现TableReducer抽象类。
+2. 使用TableMapperReducerUtil类来进行job创建初始化操作。如果是往hbase中写数据，而且reducer是可以省略的话，那么我们也可以不指定reducer的具体类，直接使用指定null，比设置job的reducer的task个数为0.
+3. 如果是在window环境中运行job(任务代码的执行时在window上)，那么需要将参数addDependency设置为false，或者将fs.defaultFS设置为file:///。如果是在集群中运行job，那么必须将addDependency设置为true，并且fs.defaultFS设置为hdfs://xxx
+4. 具体代码参考../代码/beifeng10文件夹
